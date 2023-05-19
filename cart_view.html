@@ -1,0 +1,470 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <script src="jquery.min.js"></script>
+        <script>
+            $(document).ready(function(){
+                
+                let prodList = [];
+
+                $.ajax({
+                    type: "GET",
+                    url: "cart_session_get.php",
+                    success: function (response) {
+                        let res = JSON.parse(response);
+                      
+                        if(res['res_type'] === 1){
+                            prodList = res['response'];
+                            console.log(prodList);
+                            res['response'].forEach(element => {
+                                productDiv(
+                                    element[0]['prodImage'],
+                                    element[0]['prodName'],
+                                    element[0]['prodCateg'],
+                                    element['prodQuant'],
+                                    
+                                    element[0]['prodPrice'],
+                                    );
+                            });
+                            onBottomBar();
+                        }else{
+                            $("#product_container").append("<p class='heading_nothing_to_show'>Nothing to Show! Your cart is empty.</p>")
+                            onBottomBar();
+                        }
+                        
+                    }
+                });
+
+                function onBottomBar(){
+                    let totalPriceBottomB = 0;
+                    if(!prodList.length < 1){
+                        prodList.forEach(function (prodSelf) {
+                            totalPriceBottomB+= prodSelf['prodQuant']*prodSelf[0]['prodPrice'];
+                        });
+                    }
+
+                    $("#total_price_bottom_bar_id").text("Rs. "+totalPriceBottomB);
+                    $("#final_total_p_bottom_bar").text("TOTAL: Rs. "+totalPriceBottomB)
+                }
+            });
+
+            function productDiv(imageSrc,prName,prCateg,prQuantity,prPrice){
+                $productDiv = $("<div/>",{
+                    class:"product_div"
+                });
+                // product_name_pic
+                $productNamePic = $("<div/>",{
+                    class:"product_name_pic"
+                });
+                $productImage = $("<img/>",{
+                    class:"product_image",
+                    src:`images/${imageSrc}`
+                });
+                $displayColumnFlex = $("<div/>",{
+                    class:"display_column_flex"
+                });
+                $productName = $("<p/>",{
+                    class:"product_name",
+                    text:`${prName}`
+                });
+                $productCategory = $("<p/>",{
+                    class:"product_category",
+                    text:`${prCateg}`
+                });
+                $operationDiv = $("<div/>",{
+                    class:"operation_div"
+                });
+                $removeProduct = $("<button/>",{
+                    class:"remove_product",
+                    text: "REMOVE"
+                });
+
+                $displayColumnFlex.append($productName).append($productCategory);
+                $operationDiv.append($removeProduct);
+                $productNamePic.append($productImage).append($displayColumnFlex).append($operationDiv);
+                $productDiv.append($productNamePic);
+
+                
+                // product_details
+                $productDetails = $("<div/>",{
+                    class:"product_details"
+                });
+                $productQuantity = $("<p/>",{
+                    class:"product_quantity",
+                    text: `QUANTITY: ${prQuantity}`
+                });
+                $productTotalP = $("<p/>",{
+                    class:"product_total_p",
+                    text: `TOTAL: ${prPrice} x ${prQuantity}`
+                });
+                $productTotalPSelf = $("<p/>",{
+                    class:"product_total_p_self",
+                    text: `TOTAL: Rs. ${prPrice*prQuantity}`
+                });
+
+                $productDetails.append($productQuantity).append($productTotalP).append($productTotalPSelf);
+                $productDiv.append($productDetails);
+                $("#product_container").append($productDiv);
+
+
+                $("#order_now").on("click",function () {
+                    $("#button_area_bottom").addClass("button_area_bottom_hidden").removeClass("outer_bottom_hidden_after");
+                    $("#cart_final").addClass("fixed_bottom_full").removeClass("fixed_bottom");
+                });
+
+
+                $("#finalize_order").on("click",function (e) {
+                    let $link = $(e.target);
+                    e.preventDefault();
+                    if(!$link.data('lockedAt') || +new Date() - $link.data('lockedAt') > 300) {
+                        let inpAddress = $("#inp_address_final").val();
+                        let inpName = $("#inp_address_name").val();
+                        let inpNumber = $("#inp_address_number").val();
+
+                        $.ajax({
+                            type: "POST",
+                            url: "backend_parts/finalize_order.php",
+                            data:"name_order="+inpName+"&address_order="+inpAddress+"&ph_order="+inpNumber,
+                            success: function (response) {
+                                let resDec = JSON.parse(response);
+                                if(resDec['res_type'] === 1){
+                                    cartFinalBottomToNormal();
+
+                                    window.location = "order_completed.php";
+                                }else if(resDec['rec_type'] === 2){
+
+                                    responsePrompt(resDec['response'],0);
+                                }else{
+
+                                    responsePrompt(resDec['response'],0);
+                                }
+
+                            }
+                        });
+                    }
+                    $link.data('lockedAt', +new Date());
+
+                });
+
+                function cartFinalBottomToNormal(){
+                    $("#button_area_bottom").addClass("outer_bottom_hidden_after").removeClass("button_area_bottom_hidden");
+                    $("#cart_final").addClass("fixed_bottom").removeClass("fixed_bottom_full");
+                }
+
+                function responsePrompt(stringDis,resType){
+                    $("#res_div").text(stringDis);
+                    if(resType === 1){
+                        $("#res_div").css("background-color","rgb(255,230,50)").css("display","block");
+                    }else{
+                        $("#res_div").css("background-color","rgb(255,70,70)").css("display","block");
+                    }
+                    setTimeout(function(){
+                        $("#res_div").delay(2000).css("display","none");
+                    }, 1500);
+                }
+            }
+        </script>
+    
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap');
+            *{
+                margin: 0;
+                padding: 0;
+                outline: none;
+                font-family: Roboto;
+                font-weight: normal;
+                font-size: 17px;
+            }
+            body,html{
+                background-color:rgb(250,250,250);
+                background-image: url("cart_background.jpg");
+            }
+            header{
+                display:flex;
+                flex-flow:column wrap;
+
+
+            }
+            h1{
+                margin:10px 20px;
+                padding: 20px;
+                letter-spacing: 4px;
+                font-weight: bold;
+                color: rgb(50,50,50);
+                font-size: 24px;
+            }
+            h2{
+                padding: 20px;
+                margin:0 20px;
+                letter-spacing: 4px;
+                color: rgb(70,70,70);
+                font-size: 14px;
+            }
+            #product_container{
+                padding: 0 0 100px;
+            }
+            .display_column_flex{
+                display:flex;
+                flex-flow: column wrap;
+            }
+            .product_div{
+                padding:40px;
+                display: flex;
+                flex-flow: row wrap;
+                justify-content: start;
+                align-items: flex-end;
+
+                border:none;
+                border-bottom: 1px solid rgb(200,200,200);
+               
+            }   
+            .product_name_pic{
+                display:flex;
+                flex-flow: column wrap;
+                align-items: flex-start;
+                width: 160px;
+            }
+            .product_image{
+                width:100px;
+                height:100px;
+                object-fit: cover;
+                object-position: center;
+
+                box-shadow: 1px 1px 8px 1px rgba(0,0,0,0.2);
+
+                border-radius:2px;
+
+            }   
+            .product_name{
+                max-width: 160px;
+                width: 160px;
+                padding:10px 0px;
+                letter-spacing: 1.5px;
+                font-size:20px;
+                font-weight: 500;
+                color:rgb(70,70,70);
+            }     
+            .product_category{
+                padding:0px 0px;
+                letter-spacing:1.5px;
+                color:rgb(70,70,70);
+            }
+            .price_tag_show{
+                padding:10px 0px;
+            }
+            .product_price{
+            
+                background-color: rgb(255,230,50);
+                border-radius: 2px;
+                padding:5px 10px;
+                font-weight: 500;
+                font-size: 20px;
+                color: rgb(60, 60, 60);
+                letter-spacing: 1.5px;
+            }
+            .operation_div{
+                padding: 10px 0;
+                display: flex;
+                flex-flow: column wrap;
+            }
+            .remove_product,.change_quantity_product{
+                padding: 5px 8px;
+                font-size:14px;
+                letter-spacing: 1.5px;
+                border:none;
+                margin: 10px 0;
+                background-color: transparent;
+            }
+            .remove_product{
+                background-color: rgb(250,50,50);
+            }
+            
+
+            .product_details{
+                padding:10px 20px;
+            }
+
+            .product_quantity,.product_total_p,.product_total_p_self{
+                letter-spacing: 1.5px;
+                padding: 0px 0px;
+                color:rgb(70,70,70);
+                margin: 10px 0;
+            }
+            .product_total_p{
+
+            }
+            .product_total_p_self{
+                border:none;
+                border-top: 1px solid rgb(50,50,50);
+                padding:30px 0 0 0;
+            }
+
+            .fixed_bottom{
+                background-color: rgb(30,30,30);
+                position: fixed;
+                width: 100%;
+                height: 100px;
+                bottom:0;
+                left:0;
+                box-shadow: -2px 0px 4px 1px rgba(0,0,0,0.2);
+            }
+            #cart_final{
+                transition: 0.1s ease-in-out;
+            }
+            #button_area_bottom{
+                transition: 0.2s ease-in-out;
+            }
+
+            .fixed_bottom_full{
+                background-color: rgb(30,30,30);
+                position: fixed;
+                width: 100%;
+                height: 100%;
+                top:0;
+                left:0;
+            }
+            .button_area_bottom_hidden{
+                margin:10px 0 0 0;
+                display: none;
+            }
+            .outer_bottom_hidden_after{
+                display: flex;
+                flex-flow: row wrap;
+                justify-content: space-between;
+                align-items: center;
+                margin:10px 0 0 0;
+            }
+            .total_price_bottom_bar_total_head{
+                padding:0 20px;
+                letter-spacing: 2px;
+                font-size: 15px;
+                color: rgb(210,210,210);
+
+            }
+            .total_price_bottom_bar_p{
+                margin: 5px 20px;
+                padding: 5px 0;
+                letter-spacing: 2px;
+                color: rgb(210,210,210);
+                border:none;
+                border-bottom: 1px solid rgb(210,210,210);
+            }
+            #total_price_bottom_bar_id{
+
+            }
+            .buttons_bottom_bar{
+                display: flex;
+                flex-flow: column wrap;
+
+            }
+            .order_buttons{
+                padding: 5px 10px;
+                border:none;
+                margin:6px 14px;
+                font-size: 14px;
+                background-color: rgb(240,240,240);
+            }
+            .head_bottom_p{
+                margin: 20px;
+                color: rgb(200,200,200);
+                letter-spacing: 2px;
+            }
+            .input_final_bottom_bar{
+                margin: 5px 20px;
+                padding: 5px 10px;
+                background-color: transparent;
+                border:1px solid rgb(210,210,210);
+                color: rgb(220,220,220);
+            }
+            #final_total_p_bottom_bar{
+                margin-top: 30px;
+            }
+            #finalize_order{
+                padding: 6px 10px;
+                margin: 5px 20px;
+                letter-spacing: 1px;
+                border: none;
+                background-color: rgb(255,235,50);
+            }
+
+            #res_div{
+                position:fixed;
+                bottom:0;
+                left:0;
+
+                display:none;
+                background-color:rgb(255,70,70);
+
+                border-radius:2px;
+                z-index:1111;
+                width:92%;
+                padding:10px 2%;
+                letter-spacing:1.5px;
+                margin:10px 2%;
+                font-size:15px;
+                color:rgb(20,20,20);
+
+                box-shadow:2px 2px 3px 1px rgba(0,0,0,0.2);
+            }
+            .heading_nothing_to_show{
+                margin: 30px;
+                letter-spacing: 2px;
+                text-align: center;
+                color: rgb(60,60,60);
+
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>CLOTHING STORE</h1>
+            <h2>CONFIRM YOUR PRODUCT</h2>
+        </header>
+        <div id="res_div">
+            Hello
+        </div>
+        <div id="main_div">
+            
+
+            <div id="product_container">
+
+
+
+
+                <div class="fixed_bottom" id="cart_final">
+                    <div class="outer_bottom_hidden_after" id="button_area_bottom">
+                        <div class="total_price_bottom_bar" >
+                            <p class="total_price_bottom_bar_total_head">TOTAL</p>
+                            <p class="total_price_bottom_bar_p" id="total_price_bottom_bar_id"></p>
+                        </div>
+                        <div class="buttons_bottom_bar">
+                            <button id="order_now" class="order_buttons">ORDER NOW</button>
+                            <button style="display:none;" id="order_whatsapp" class="order_buttons">ORDER THROUGH WHATSAPP</button>
+
+                        </div>
+                    </div>
+
+                    <div id="bottom_final_details">
+
+                        <p class="head_bottom_p">Enter Address</p>
+                        <input id="inp_address_final" class="input_final_bottom_bar"/>
+
+                        <p class="head_bottom_p">Enter Your Name</p>
+                        <input id="inp_address_name" class="input_final_bottom_bar"/>
+
+                        <p class="head_bottom_p">Enter Phone Number</p>
+                        <input id="inp_address_number" class="input_final_bottom_bar"/>
+
+
+                        <p id="final_total_p_bottom_bar" class="head_bottom_p">Total: 0</p>
+                        <button id="finalize_order">PLACE ORDER</button>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </body>
+</html>
